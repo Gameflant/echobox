@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -63,6 +64,7 @@ fun TrackDetailScreen(
     onBack: () -> Unit,
     onPlay: (Track) -> Unit = {},
     onOpenLocal: () -> Unit = {},
+    onEnqueue: (Track, Boolean) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
     val repo = LocalTrackRepository.current
@@ -182,6 +184,30 @@ fun TrackDetailScreen(
                                     summary = if (downloaded) "本地文件" else "在线流媒体",
                                 )
                             }
+                        }
+                    }
+                    val t = track
+                    if (t != null) {
+                        item {
+                            Spacer(Modifier.height(12.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                GlassActionBar(
+                                    text = "下一首播放",
+                                    onClick = { onEnqueue(t, true) },
+                                    modifier = Modifier.weight(1f),
+                                    variant = ActionBarVariant.Light,
+                                )
+                                GlassActionBar(
+                                    text = "加入队列",
+                                    onClick = { onEnqueue(t, false) },
+                                    modifier = Modifier.weight(1f),
+                                    variant = ActionBarVariant.Light,
+                                )
+                            }
+                            Spacer(Modifier.height(100.dp))
                         }
                     }
                     if (error.isNotBlank()) {

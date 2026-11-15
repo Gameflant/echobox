@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 决心 -->
+    <path
+        android:pathData="M33.00,26.00 h7.00 v3.50 h-7.00 z M68.00,26.00 h7.00 v3.50 h-7.00 z M29.50,29.50 h17.50 v3.50 h-17.50 z M61.00,29.50 h17.50 v3.50 h-17.50 z M26.00,33.00 h24.50 v3.50 h-24.50 z M57.50,33.00 h24.50 v3.50 h-24.50 z M26.00,36.50 h24.50 v3.50 h-24.50 z M57.50,36.50 h24.50 v3.50 h-24.50 z M26.00,40.00 h56.00 v3.50 h-56.00 z M26.00,43.50 h56.00 v3.50 h-56.00 z M26.00,47.00 h56.00 v3.50 h-56.00 z M26.00,50.50 h56.00 v3.50 h-56.00 z M26.00,54.00 h56.00 v3.50 h-56.00 z M26.00,57.50 h56.00 v3.50 h-56.00 z M33.00,61.00 h42.00 v3.50 h-42.00 z M33.00,64.50 h42.00 v3.50 h-42.00 z M40.00,68.00 h28.00 v3.50 h-28.00 z M40.00,71.50 h28.00 v3.50 h-28.00 z M47.00,75.00 h14.00 v3.50 h-14.00 z M47.00,78.50 h14.00 v3.50 h-14.00 z"
+        android:fillColor="#FFFF0000" />
+    <!-- 心中的圆 -->
+    <path
+        android:pathData="M42.50,54 a11.50,11.50 0 1,0 23.00,0 a11.50,11.50 0 1,0 -23.00,0 z"
+        android:fillColor="#FFFFFFFF" />
+    <!-- 圆里的播放键 -->
+    <path
+        android:pathData="M50.6,48.2 L50.6,59.8 L58.9,54 Z"
+        android:fillColor="#FFFF0000" />
+</vector>

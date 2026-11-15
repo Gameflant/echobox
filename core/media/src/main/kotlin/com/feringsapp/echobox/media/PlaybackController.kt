@@ -98,18 +98,7 @@ class PlaybackController(private val context: Context) {
     fun playQueue(items: List<QueueItem>, startIndex: Int) {
         val c = controller ?: return
         if (items.isEmpty()) return
-        val mediaItems = items.map { item ->
-            MediaItem.Builder()
-                .setMediaId(item.id)
-                .setUri(item.uri)
-                .setMediaMetadata(
-                    MediaMetadata.Builder()
-                        .setTitle(item.title)
-                        .setArtist(item.artist)
-                        .build(),
-                )
-                .build()
-        }
+        val mediaItems = items.map { it.toMediaItem() }
         val safeIndex = startIndex.coerceIn(items.indices)
         c.setMediaItems(mediaItems, safeIndex, 0L)
         c.prepare()
@@ -123,6 +112,66 @@ class PlaybackController(private val context: Context) {
             queueSize = items.size,
         )
     }
+
+    /** 当前队列快照，界面据此渲染播放列表。 */
+    fun queueItems(): List<QueueItem> {
+        val c = controller ?: return emptyList()
+        return (0 until c.mediaItemCount).mapNotNull { i ->
+            val item = c.getMediaItemAt(i) ?: return@mapNotNull null
+            val meta = item.mediaMetadata
+            QueueItem(
+                id = item.mediaId,
+                title = meta.title?.toString().orEmpty(),
+                artist = meta.artist?.toString().orEmpty(),
+                uri = item.localConfiguration?.uri?.toString().orEmpty(),
+            )
+        }
+    }
+
+    /** 跳播队列里的第 index 首。 */
+    fun jumpTo(index: Int) {
+        val c = controller ?: return
+        if (index !in 0 until c.mediaItemCount) return
+        c.seekToDefaultPosition(index)
+        c.play()
+    }
+
+    fun removeAt(index: Int) {
+        val c = controller ?: return
+        if (index !in 0 until c.mediaItemCount) return
+        c.removeMediaItem(index)
+    }
+
+    /** 追加到队列末尾。 */
+    fun append(items: List<QueueItem>) {
+        val c = controller ?: return
+        if (items.isEmpty()) return
+        c.addMediaItems(items.map { it.toMediaItem() })
+    }
+
+    /** 插到当前曲目后面，就是「下一首播放」。 */
+    fun insertNext(items: List<QueueItem>) {
+        val c = controller ?: return
+        if (items.isEmpty()) return
+        val at = (c.currentMediaItemIndex + 1).coerceIn(0, c.mediaItemCount)
+        c.addMediaItems(at, items.map { it.toMediaItem() })
+    }
+
+    fun clearQueue() {
+        controller?.clearMediaItems()
+    }
+
+    private fun QueueItem.toMediaItem(): MediaItem =
+        MediaItem.Builder()
+            .setMediaId(id)
+            .setUri(uri)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(title)
+                    .setArtist(artist)
+                    .build(),
+            )
+            .build()
 
     fun toggle() {
         val c = controller ?: return

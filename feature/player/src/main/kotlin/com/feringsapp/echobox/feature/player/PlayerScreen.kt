@@ -1,5 +1,6 @@
 package com.feringsapp.echobox.feature.player
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -30,6 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -76,6 +79,7 @@ fun PlayerScreen(
     onBack: () -> Unit = {},
     isFavorite: Boolean = false,
     onToggleFavorite: () -> Unit = {},
+    onOpenQueue: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val controller = LocalPlaybackController.current
@@ -205,6 +209,25 @@ fun PlayerScreen(
                         style = MiuixTheme.textStyles.footnote2,
                         color = Color.White.copy(alpha = 0.6f),
                     )
+                }
+                GlassIconButton(
+                    onClick = onOpenQueue,
+                    backdrop = backdrop,
+                    style = glassStyle,
+                    material = glassMaterial,
+                ) {
+                    Canvas(Modifier.size(18.dp)) {
+                        repeat(3) { i ->
+                            val y = size.height * (0.2f + i * 0.3f)
+                            drawLine(
+                                color = Color.White,
+                                start = Offset(0f, y),
+                                end = Offset(size.width, y),
+                                strokeWidth = 2.dp.toPx(),
+                                cap = StrokeCap.Round,
+                            )
+                        }
+                    }
                 }
                 GlassIconButton(
                     onClick = { showLyrics = !showLyrics },

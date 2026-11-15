@@ -108,6 +108,7 @@ fun HomeScreen(
 @Composable
 fun LibraryScreen(
     onTrackClick: (String) -> Unit = {},
+    onAlbumClick: (String) -> Unit = {},
     onLocalMusic: () -> Unit = {},
     onFavorites: () -> Unit = {},
     onRecent: () -> Unit = {},
@@ -155,7 +156,7 @@ fun LibraryScreen(
                             count = list.size,
                             coverUrl = list.firstOrNull { it.cover.isNotBlank() }?.let { coverBase + it.cover }.orEmpty(),
                             modifier = Modifier.width(150.dp),
-                            onClick = { onTrackClick(list.first().id) },
+                            onClick = { onAlbumClick(name) },
                         )
                     }
                 }
@@ -235,9 +236,7 @@ fun DiscoverScreen(
                             count = list.size,
                             coverUrl = list.firstOrNull { it.cover.isNotBlank() }?.let { coverBase + it.cover }.orEmpty(),
                             modifier = Modifier.width(190.dp),
-                            onClick = {
-                                list.firstOrNull()?.let { onAlbumClick(it.id) }
-                            },
+                            onClick = { onAlbumClick(name) },
                         )
                     }
                 }

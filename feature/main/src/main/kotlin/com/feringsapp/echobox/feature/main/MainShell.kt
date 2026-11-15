@@ -1,5 +1,7 @@
 package com.feringsapp.echobox.feature.main
 
+import android.net.Uri
+
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -72,6 +74,9 @@ private object Routes {
     const val favorites = "favorites"
     const val recent = "recent"
     const val downloads = "downloads"
+    const val queue = "queue"
+    const val album = "album/{name}"
+    fun album(name: String) = "album/${Uri.encode(name)}"
 }
 
 private data class Tab(
@@ -195,6 +200,7 @@ fun MainShell(modifier: Modifier = Modifier) {
                     composable(Routes.library) {
                         LibraryScreen(
                             onTrackClick = { navController.openTrack(it) },
+                            onAlbumClick = { navController.navigate(Routes.album(it)) },
                             onLocalMusic = { navController.navigate(Routes.local) },
                             onFavorites = { navController.navigate(Routes.favorites) },
                             onRecent = { navController.navigate(Routes.recent) },
@@ -205,7 +211,7 @@ fun MainShell(modifier: Modifier = Modifier) {
                         DiscoverScreen(
                             onTrackClick = { navController.openTrack(it) },
                             onSearch = { navController.navigate(Routes.search) },
-                            onAlbumClick = { navController.openTrack(it) },
+                            onAlbumClick = { navController.navigate(Routes.album(it)) },
                         )
                     }
                     composable(Routes.settings) {
@@ -280,6 +286,15 @@ fun MainShell(modifier: Modifier = Modifier) {
                                 playTracks(allTracks, if (index >= 0) index else 0)
                             },
                             onOpenLocal = { navController.navigate(Routes.local) },
+                            onEnqueue = { t, next ->
+                                val item = com.feringsapp.echobox.media.QueueItem(
+                                    id = t.id,
+                                    title = t.title,
+                                    artist = t.author,
+                                    uri = uriFor(t),
+                                )
+                                if (next) playback?.insertNext(listOf(item)) else playback?.append(listOf(item))
+                            },
                         )
                     }
                     composable(Routes.player) {
@@ -288,6 +303,34 @@ fun MainShell(modifier: Modifier = Modifier) {
                             isFavorite = playbackState.trackId in favorites,
                             onToggleFavorite = {
                                 scope.launch { libraryStore.toggleFavorite(playbackState.trackId) }
+                            },
+                            onOpenQueue = { navController.navigate(Routes.queue) { launchSingleTop = true } },
+                        )
+                    }
+                    composable(
+                        route = Routes.album,
+                        arguments = listOf(navArgument("name") { type = NavType.StringType }),
+                    ) { entry ->
+                        val name = entry.arguments?.getString("name").orEmpty()
+                        val list = remember(allTracks, name) {
+                            allTracks.filter { (it.series?.name ?: it.game) == name }
+                        }
+                        AlbumScreen(
+                            album = name,
+                            tracks = list,
+                            coverBase = coverBase,
+                            onBack = { navController.popBackStack() },
+                            onPlayAt = { index -> playTracks(list, index) },
+                            onPlayAll = { playTracks(list, 0) },
+                            onShuffle = { playTracks(list.shuffled(), 0) },
+                        )
+                    }
+                    composable(Routes.queue) {
+                        QueueScreen(
+                            onBack = { navController.popBackStack() },
+                            onClear = {
+                                playback?.clearQueue()
+                                navController.popBackStack()
                             },
                         )
                     }
