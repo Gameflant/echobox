@@ -142,6 +142,18 @@ fun SearchScreen(
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                             )
                         }
+                        Text(
+                            text = "清空",
+                            style = MiuixTheme.textStyles.footnote2,
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                            modifier = Modifier
+                                .background(
+                                    color = MiuixTheme.colorScheme.surfaceVariant,
+                                    shape = RoundedCornerShape(50),
+                                )
+                                .clickable { scope.launch { libraryStore.clearHistory() } }
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                        )
                     }
                 }
                 LazyColumn(

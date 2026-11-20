@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -76,6 +77,8 @@ private object Routes {
     const val downloads = "downloads"
     const val queue = "queue"
     const val album = "album/{name}"
+    const val update = "update"
+    const val submissions = "submissions"
     fun album(name: String) = "album/${Uri.encode(name)}"
 }
 
@@ -152,12 +155,22 @@ fun MainShell(modifier: Modifier = Modifier) {
                     artist = item.author,
                     uri = uriFor(item),
                     lyric = "",
+                    coverUrl = if (item.cover.isBlank()) "" else coverBase + item.cover,
+                    album = item.series?.name ?: item.game,
                 )
             }
             playback?.playQueue(queue, index)
             historyRepo.record(current.id)
         }
     }
+
+    // 恢复队列时按 trackId 重新解析地址，避免指向已被删除的本地文件
+    LaunchedEffect(playback, allTracks) {
+        playback?.uriResolver = { id ->
+            allTracks.firstOrNull { it.id == id }?.let { uriFor(it) }
+        }
+    }
+
 
     Box(
         modifier
@@ -222,6 +235,8 @@ fun MainShell(modifier: Modifier = Modifier) {
                             onStorage = { navController.navigate(Routes.storage) },
                             onTranscode = { navController.navigate(Routes.transcode) },
                             onLicenses = { navController.navigate(Routes.licenses) },
+                            onUpdate = { navController.navigate(Routes.update) },
+                            onSubmissions = { navController.navigate(Routes.submissions) },
                         )
                     }
                     composable(Routes.appearance) {
@@ -234,6 +249,9 @@ fun MainShell(modifier: Modifier = Modifier) {
                     composable(Routes.upload) {
                         com.feringsapp.echobox.feature.upload.UploadScreen(
                             onBack = { navController.popBackStack() },
+                            albumNames = remember(allTracks) {
+                                allTracks.map { it.series?.name ?: it.game }.filter { it.isNotBlank() }.distinct()
+                            },
                         )
                     }
                     composable(Routes.local) {
@@ -292,6 +310,8 @@ fun MainShell(modifier: Modifier = Modifier) {
                                     title = t.title,
                                     artist = t.author,
                                     uri = uriFor(t),
+                                    coverUrl = if (t.cover.isBlank()) "" else coverBase + t.cover,
+                                    album = t.series?.name ?: t.game,
                                 )
                                 if (next) playback?.insertNext(listOf(item)) else playback?.append(listOf(item))
                             },
@@ -333,6 +353,12 @@ fun MainShell(modifier: Modifier = Modifier) {
                                 navController.popBackStack()
                             },
                         )
+                    }
+                    composable(Routes.update) {
+                        UpdateScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable(Routes.submissions) {
+                        MySubmissionsScreen(onBack = { navController.popBackStack() })
                     }
                     composable(Routes.search) {
                         SearchScreen(

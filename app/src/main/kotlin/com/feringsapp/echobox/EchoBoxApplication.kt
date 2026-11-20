@@ -14,6 +14,14 @@ class EchoBoxApplication : Application() {
                 repo = BuildConfig.PROD_REPO,
                 branch = BuildConfig.PROD_BRANCH,
             ),
+            appVersion = BuildConfig.VERSION_NAME,
+            appVersionCode = BuildConfig.VERSION_CODE,
+            updateOwner = BuildConfig.UPDATE_OWNER,
+            updateRepo = BuildConfig.UPDATE_REPO,
+            githubPat = BuildConfig.GITHUB_PAT,
+            stagingOwner = BuildConfig.STAGING_OWNER,
+            stagingRepo = BuildConfig.STAGING_REPO,
+            stagingTag = BuildConfig.STAGING_TAG,
         )
     }
 

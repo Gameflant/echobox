@@ -25,8 +25,8 @@ android {
         applicationId = "com.feringsapp.echobox"
         minSdk = 34
         targetSdk = 37
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 4
+        versionName = "0.0.4"
         ndk { abiFilters += listOf("arm64-v8a") }
         buildConfigField("String", "GITHUB_CLIENT_ID", "\"${localProps.getProperty("github.clientId", "")}\"")
         buildConfigField("String", "STAGING_OWNER", "\"${localProps.getProperty("github.stagingOwner", "")}\"")
@@ -34,6 +34,10 @@ android {
         buildConfigField("String", "PROD_OWNER", "\"${localProps.getProperty("prod.owner", "echobox")}\"")
         buildConfigField("String", "PROD_REPO", "\"${localProps.getProperty("prod.repo", "echobox-music")}\"")
         buildConfigField("String", "PROD_BRANCH", "\"${localProps.getProperty("prod.branch", "main")}\"")
+        buildConfigField("String", "GITHUB_PAT", "\"${localProps.getProperty("github.pat", "")}\"")
+        buildConfigField("String", "STAGING_TAG", "\"${localProps.getProperty("github.stagingTag", "staging-inbox")}\"")
+        buildConfigField("String", "UPDATE_OWNER", "\"${localProps.getProperty("update.owner", "Gameflant")}\"")
+        buildConfigField("String", "UPDATE_REPO", "\"${localProps.getProperty("update.repo", "echobox")}\"")
     }
 
     signingConfigs {
@@ -48,6 +52,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("release")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

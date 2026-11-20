@@ -15,6 +15,9 @@ import com.feringsapp.echobox.core.network.createHttpClient
 import com.feringsapp.echobox.core.repo.DownloadRepository
 import com.feringsapp.echobox.core.repo.HistoryRepository
 import com.feringsapp.echobox.core.repo.SubmissionRepository
+import com.feringsapp.echobox.core.network.GitHubApi
+import com.feringsapp.echobox.core.repo.SubmissionUploader
+import com.feringsapp.echobox.core.repo.UpdateRepository
 import com.feringsapp.echobox.core.repo.TrackRepository
 import com.feringsapp.echobox.core.library.DemoLibrary
 import com.feringsapp.echobox.core.settings.AppearanceStore
@@ -33,6 +36,14 @@ import kotlinx.coroutines.launch
 class CoreGraph(
     private val context: Context,
     val repoConfig: RepoConfig,
+    private val appVersion: String = "0.0.4",
+    private val appVersionCode: Int = 4,
+    private val updateOwner: String = "Gameflant",
+    private val updateRepo: String = "echobox",
+    private val githubPat: String = "",
+    private val stagingOwner: String = "",
+    private val stagingRepo: String = "",
+    private val stagingTag: String = "staging-inbox",
 ) {
     val appScope: CoroutineScope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
 
@@ -66,6 +77,16 @@ class CoreGraph(
     val trackRepository: TrackRepository by lazy { TrackRepository(database) }
 
     val submissionRepository: SubmissionRepository by lazy { SubmissionRepository(database) }
+
+    val updateRepository: UpdateRepository by lazy {
+        UpdateRepository(context, updateOwner, updateRepo, githubPat, appVersion, appVersionCode)
+    }
+
+    val githubApi: GitHubApi by lazy { GitHubApi(githubPat, stagingOwner, stagingRepo) }
+
+    val submissionUploader: SubmissionUploader by lazy {
+        SubmissionUploader(context, githubApi, database, stagingTag)
+    }
 
     val downloadRepository: DownloadRepository by lazy {
         DownloadRepository(context, database, safeHttp, mirrorResolver)

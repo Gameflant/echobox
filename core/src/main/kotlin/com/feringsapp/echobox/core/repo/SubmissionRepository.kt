@@ -3,6 +3,7 @@ package com.feringsapp.echobox.core.repo
 import com.feringsapp.echobox.core.db.EchoDatabase
 import com.feringsapp.echobox.core.db.SubmissionEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
@@ -64,4 +65,17 @@ class SubmissionRepository(private val db: EchoDatabase) {
     }
 
     suspend fun delete(recordId: String) = db.submissionDao().delete(recordId)
+
+    /**
+     * 用服务端 pending 目录校正本地状态：
+     * 本地还是 PENDING、但服务端已经不在待审队列里的，视为已处理。
+     */
+    suspend fun syncStates(pendingIds: Set<String>) {
+        val now = System.currentTimeMillis()
+        db.submissionDao().observeAll().first()
+            .filter { it.state == "PENDING" && it.recordId !in pendingIds }
+            .forEach { entity ->
+                db.submissionDao().upsert(entity.copy(state = "PROCESSED", updatedAtEpoch = now))
+            }
+    }
 }

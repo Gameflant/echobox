@@ -1,6 +1,10 @@
 package com.feringsapp.echobox
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,19 +27,29 @@ import com.feringsapp.echobox.feature.main.LocalLibraryStore
 import com.feringsapp.echobox.feature.main.LocalMediaStorage
 import com.feringsapp.echobox.feature.main.LocalTrackRepository
 import com.feringsapp.echobox.feature.player.LocalPlaybackController
-import com.feringsapp.echobox.feature.upload.LocalSubmissionRepository
+import com.feringsapp.echobox.feature.upload.LocalSubmissionUploader
 import com.feringsapp.echobox.media.PlaybackController
+import com.feringsapp.echobox.media.QueueStore
 
 class MainActivity : ComponentActivity() {
+
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.isNavigationBarContrastEnforced = false
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         val graph = (application as EchoBoxApplication).graph
         setContent {
             val appearance by graph.appearanceStore.flow.collectAsState(initial = Appearance())
-            val playback = remember { PlaybackController(applicationContext) }
+            val playback = remember { PlaybackController(applicationContext, QueueStore(graph.database.metaDao())) }
             LaunchedEffect(Unit) { playback.connect() }
             CompositionLocalProvider(
                 LocalAppearance provides appearance,
@@ -49,7 +63,7 @@ class MainActivity : ComponentActivity() {
                 LocalDownloadRepository provides graph.downloadRepository,
                 LocalHistoryRepository provides graph.historyRepository,
                 LocalCoreGraph provides graph,
-                LocalSubmissionRepository provides graph.submissionRepository,
+                LocalSubmissionUploader provides graph.submissionUploader,
             ) {
                 EchoBoxTheme(appearance = appearance) {
                     EchoBoxApp()

@@ -23,3 +23,7 @@
 # Ktor / OkHttp
 -dontwarn org.slf4j.**
 -dontwarn kotlinx.atomicfu.**
+
+# Shizuku 的 newProcess 需要反射调用，禁止混淆方法名
+-keep class rikka.shizuku.** { *; }
+-dontwarn rikka.shizuku.**

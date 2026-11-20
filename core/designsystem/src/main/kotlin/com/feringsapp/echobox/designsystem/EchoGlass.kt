@@ -18,6 +18,12 @@ import top.yukonga.miuix.kmp.material.GlassStyle
  */
 object EchoGlass {
 
+    /** 强度 0.4..1.6 映射到 4..44dp，端点差异明显，1.0 附近过渡平滑。 */
+    fun blurRadiusFor(k: Float): androidx.compose.ui.unit.Dp {
+        val clamped = k.coerceIn(0.4f, 1.6f)
+        return (4f + 40f * (clamped - 0.4f) / 1.2f).dp
+    }
+
     fun style(mode: GlassMode, intensity: Float, isDark: Boolean = false): GlassStyle {
         val base = GlassDefaults.style(isDark)
         val k = intensity.coerceIn(0.2f, 2f)
@@ -55,13 +61,13 @@ object EchoGlass {
         val k = intensity.coerceIn(0.2f, 2f)
         return when (mode) {
             GlassMode.LIQUID -> base.copy(
-                blurRadius = (18f * k).dp,
+                blurRadius = blurRadiusFor(k),
                 first = GlassColorLayer(Color(0x1A000000), GlassColorBlendMode.PlusDarker),
                 second = GlassColorLayer(Color(0xB3FFFFFF), GlassColorBlendMode.SoftLight),
                 third = GlassColorLayer(Color(0x80D8EAFF), GlassColorBlendMode.HardLight),
             )
             GlassMode.FROSTED -> base.copy(
-                blurRadius = (36f * k).dp,
+                blurRadius = blurRadiusFor(k) * 1.6f,
                 first = GlassColorLayer(Color(0x0F000000), GlassColorBlendMode.PlusDarker),
                 second = GlassColorLayer(Color(0xBFFFFFFF), GlassColorBlendMode.SoftLight),
                 third = GlassColorLayer(Color(0x99FFFFFF), GlassColorBlendMode.HardLight),

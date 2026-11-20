@@ -350,6 +350,8 @@ fun SettingsScreen(
     onStorage: () -> Unit = {},
     onTranscode: () -> Unit = {},
     onLicenses: () -> Unit = {},
+    onUpdate: () -> Unit = {},
+    onSubmissions: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val graph = LocalCoreGraph.current
@@ -361,6 +363,7 @@ fun SettingsScreen(
             EchoGroup {
                 SettingRow("外观", "颜色、玻璃、动效", onAppearance)
                 SettingRow("上传作品", "选择音频并填写曲目信息", onUpload)
+                SettingRow("我的投稿", "查看审核状态", onSubmissions)
                 SettingRow("同步曲库", syncState, onClick = {
                     scope.launch {
                         syncState = "同步中…"
@@ -376,13 +379,14 @@ fun SettingsScreen(
         item {
             EchoGroup {
                 SettingRow("网络", "选择直连或镜像源", onNetwork)
+                SettingRow("检查更新", "从 GitHub 获取最新版本", onUpdate)
                 SettingRow("存储与缓存", "", onStorage)
                 SettingRow("转码预设", "", onTranscode)
             }
         }
         item {
             EchoGroup(title = "关于") {
-                SettingRow("EchoBox", "0.2.0 · GPL-3.0")
+                SettingRow("EchoBox", "0.0.4 · Apache-2.0")
                 SettingRow("开源许可", "", onLicenses)
             }
         }
@@ -612,7 +616,7 @@ internal fun SongRow(track: Track, coverUrl: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun EchoGroup(
+internal fun EchoGroup(
     title: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {

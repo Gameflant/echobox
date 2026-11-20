@@ -27,7 +27,8 @@ enum class ActionBarVariant {
 
 /**
  * 悬浮主操作条：内容再长也不会把它挤出屏幕。
- * Blue = 实色主色 + 白字；Light = 白色半透明 + 主色字。
+ * 可用：Blue = 实色主色 + 白字；Light = 实色白 + 主色字。
+ * 不可用：白底 + 灰字，保持不透明，避免压在表单上透出文字。
  */
 @Composable
 fun GlassActionBar(
@@ -40,28 +41,32 @@ fun GlassActionBar(
 ) {
     val shape = RoundedCornerShape(26.dp)
     val accent = LocalAccentColor.current
-    val alpha = if (enabled) 1f else 0.45f
-    val fill = when (variant) {
-        ActionBarVariant.Blue -> accent
-        ActionBarVariant.Light -> Color.White.copy(alpha = 0.94f)
+    val disabledText = MiuixTheme.colorScheme.onSurfaceVariantSummary
+
+    val fill = when {
+        !enabled -> Color.White
+        variant == ActionBarVariant.Blue -> accent
+        else -> Color.White
     }
-    val textColor = contentColor ?: when (variant) {
-        ActionBarVariant.Blue -> Color.White
-        ActionBarVariant.Light -> accent
+    val textColor = when {
+        !enabled -> disabledText
+        contentColor != null -> contentColor
+        variant == ActionBarVariant.Blue -> Color.White
+        else -> accent
     }
 
     Box(
         modifier
             .fillMaxWidth()
             .height(54.dp)
-            .shadow(if (variant == ActionBarVariant.Blue) 10.dp else 8.dp, shape)
+            .shadow(if (variant == ActionBarVariant.Blue && enabled) 10.dp else 8.dp, shape)
             .clip(shape)
-            .background(fill.copy(alpha = fill.alpha * alpha))
+            .background(fill)
             .then(
-                if (variant == ActionBarVariant.Light) {
-                    Modifier.border(0.8.dp, Color(0x14000000), shape)
-                } else {
+                if (enabled && variant == ActionBarVariant.Blue) {
                     Modifier
+                } else {
+                    Modifier.border(0.8.dp, Color(0x14000000), shape)
                 },
             )
             .clickable(enabled = enabled, onClick = onClick),
@@ -69,7 +74,7 @@ fun GlassActionBar(
     ) {
         Text(
             text = text,
-            color = textColor.copy(alpha = alpha),
+            color = textColor,
             style = MiuixTheme.textStyles.body1,
         )
     }

@@ -2,6 +2,7 @@ package com.feringsapp.echobox.media
 
 import android.content.ComponentName
 import android.content.Context
+import android.net.Uri
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -28,6 +29,10 @@ data class QueueItem(
     val uri: String,
     /** 歌词全文（LRC），没有歌词就是空串。 */
     val lyric: String = "",
+    /** 封面地址（https），没有就空串。 */
+    val coverUrl: String = "",
+    /** 专辑（系列）名，通知里跟在歌手后面。 */
+    val album: String = "",
 )
 
 data class PlaybackUiState(
@@ -44,6 +49,7 @@ data class PlaybackUiState(
     val repeatMode: Int = Player.REPEAT_MODE_OFF,
     val hasNext: Boolean = false,
     val hasPrevious: Boolean = false,
+    val coverUrl: String = "",
 ) {
     val hasTrack: Boolean get() = title.isNotBlank() || trackId.isNotBlank()
 }
@@ -55,7 +61,10 @@ enum class RepeatMode { OFF, ALL, ONE }
  * 与 PlaybackService 里的 MediaSession 建立连接，并把播放状态暴露成 StateFlow。
  * 队列、上一首/下一首、循环都走 MediaController 自己的能力，不在这里另造一套。
  */
-class PlaybackController(private val context: Context) {
+class PlaybackController(
+    private val context: Context,
+    private val queueStore: QueueStore? = null,
+) {
 
     private val _state = MutableStateFlow(PlaybackUiState())
     val state: StateFlow<PlaybackUiState> = _state.asStateFlow()
@@ -63,6 +72,10 @@ class PlaybackController(private val context: Context) {
     private var controller: MediaController? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var ticker: Job? = null
+    private var ticksSincePersist = 0
+
+    /** 恢复队列时用 trackId 重新解析播放地址；下载文件被删时会退回在线源。 */
+    var uriResolver: ((String) -> String?)? = null
 
     private val listener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
@@ -84,6 +97,7 @@ class PlaybackController(private val context: Context) {
                     controller = future.get().also { it.addListener(listener) }
                     sync(controller)
                     startTicker()
+                    restoreIfNeeded()
                 }
             },
             ContextCompat.getMainExecutor(context),
@@ -111,6 +125,7 @@ class PlaybackController(private val context: Context) {
             currentIndex = safeIndex,
             queueSize = items.size,
         )
+        persist()
     }
 
     /** 当前队列快照，界面据此渲染播放列表。 */
@@ -124,6 +139,7 @@ class PlaybackController(private val context: Context) {
                 title = meta.title?.toString().orEmpty(),
                 artist = meta.artist?.toString().orEmpty(),
                 uri = item.localConfiguration?.uri?.toString().orEmpty(),
+                coverUrl = meta.artworkUri?.toString().orEmpty(),
             )
         }
     }
@@ -134,12 +150,14 @@ class PlaybackController(private val context: Context) {
         if (index !in 0 until c.mediaItemCount) return
         c.seekToDefaultPosition(index)
         c.play()
+        persist()
     }
 
     fun removeAt(index: Int) {
         val c = controller ?: return
         if (index !in 0 until c.mediaItemCount) return
         c.removeMediaItem(index)
+        persist()
     }
 
     /** 追加到队列末尾。 */
@@ -147,6 +165,7 @@ class PlaybackController(private val context: Context) {
         val c = controller ?: return
         if (items.isEmpty()) return
         c.addMediaItems(items.map { it.toMediaItem() })
+        persist()
     }
 
     /** 插到当前曲目后面，就是「下一首播放」。 */
@@ -155,23 +174,71 @@ class PlaybackController(private val context: Context) {
         if (items.isEmpty()) return
         val at = (c.currentMediaItemIndex + 1).coerceIn(0, c.mediaItemCount)
         c.addMediaItems(at, items.map { it.toMediaItem() })
+        persist()
     }
 
     fun clearQueue() {
         controller?.clearMediaItems()
+        persist()
     }
 
-    private fun QueueItem.toMediaItem(): MediaItem =
-        MediaItem.Builder()
+    /** 把当前队列和位置写盘。变化点与定时器都会调用。 */
+    fun persist() {
+        val store = queueStore ?: return
+        val c = controller ?: return
+        if (c.mediaItemCount == 0) {
+            scope.launch(Dispatchers.IO) { runCatching { store.clear() } }
+            return
+        }
+        val snapshot = queueItems()
+        val index = c.currentMediaItemIndex.coerceAtLeast(0)
+        val position = c.currentPosition.coerceAtLeast(0L)
+        val repeat = c.repeatMode
+        scope.launch(Dispatchers.IO) {
+            runCatching { store.save(snapshot, index, position, repeat) }
+        }
+    }
+
+    /** 启动时恢复上次的队列，只准备不自动播放。 */
+    private fun restoreIfNeeded() {
+        val store = queueStore ?: return
+        scope.launch {
+            val persisted = store.load() ?: return@launch
+            if (persisted.items.isEmpty()) return@launch
+            val c = controller ?: return@launch
+            if (c.mediaItemCount > 0) return@launch
+            // MainShell 可能比 controller 晚一步注入 resolver，等一小会儿
+            if (uriResolver == null) delay(800)
+            val items = store.toQueueItems(persisted).map { item ->
+                val fresh = uriResolver?.invoke(item.id)
+                if (!fresh.isNullOrBlank()) item.copy(uri = fresh) else item
+            }
+            val mediaItems = items.map { it.toMediaItem() }
+            val index = persisted.index.coerceIn(mediaItems.indices)
+            runCatching {
+                c.setMediaItems(mediaItems, index, persisted.positionMs)
+                c.repeatMode = persisted.repeatMode
+                c.prepare()
+                sync(c)
+            }
+        }
+    }
+
+    private fun QueueItem.toMediaItem(): MediaItem {
+        val metadata = MediaMetadata.Builder()
+            .setTitle(title)
+            .setArtist(artist)
+            .apply {
+                if (coverUrl.isNotBlank()) setArtworkUri(Uri.parse(coverUrl))
+                if (album.isNotBlank()) setAlbumTitle(album)
+            }
+            .build()
+        return MediaItem.Builder()
             .setMediaId(id)
             .setUri(uri)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(title)
-                    .setArtist(artist)
-                    .build(),
-            )
+            .setMediaMetadata(metadata)
             .build()
+    }
 
     fun toggle() {
         val c = controller ?: return
@@ -233,6 +300,11 @@ class PlaybackController(private val context: Context) {
                         )
                     }
                 }
+                ticksSincePersist++
+                if (queueStore != null && controller?.isPlaying == true && ticksSincePersist >= 33) {
+                    ticksSincePersist = 0
+                    persist()
+                }
                 delay(300)
             }
         }
@@ -255,6 +327,7 @@ class PlaybackController(private val context: Context) {
             repeatMode = player.repeatMode,
             hasNext = player.hasNextMediaItem(),
             hasPrevious = player.hasPreviousMediaItem(),
+            coverUrl = metadata?.artworkUri?.toString().orEmpty(),
         )
     }
 }

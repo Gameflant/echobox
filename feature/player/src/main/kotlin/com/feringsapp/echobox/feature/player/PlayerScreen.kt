@@ -40,6 +40,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.Player
@@ -162,12 +164,25 @@ fun PlayerScreen(
                         .clip(RoundedCornerShape(28.dp))
                         .background(coverBrush),
                 ) {
+                    if (state.coverUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = state.coverUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.14f)),
+                        )
+                    }
                     Box(
                         Modifier
                             .fillMaxSize()
                             .padding(28.dp)
                             .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.16f)),
+                            .background(Color.Black.copy(alpha = 0.08f)),
                     )
                 }
             }

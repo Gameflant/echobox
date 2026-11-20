@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -21,13 +23,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.feringsapp.echobox.core.settings.AppearancePalette
 import com.feringsapp.echobox.core.settings.GlassMode
+import com.feringsapp.echobox.designsystem.EchoGlass
 import com.feringsapp.echobox.designsystem.LocalAppearance
 import com.feringsapp.echobox.designsystem.LocalAppearanceStore
 import kotlinx.coroutines.launch
@@ -81,6 +87,7 @@ fun AppearanceScreen(
         }
         item {
             SubCard(title = "玻璃") {
+                var previewIntensity by remember { mutableFloatStateOf(appearance.glassIntensity) }
                 GlassModeRow(
                     title = "毛玻璃",
                     summary = "只有背景模糊，无折射与高光",
@@ -93,12 +100,21 @@ fun AppearanceScreen(
                     selected = appearance.glassMode == GlassMode.LIQUID,
                     onClick = { scope.launch { store.setGlassMode(GlassMode.LIQUID) } },
                 )
+                GlassPreview(
+                    intensity = previewIntensity,
+                    mode = appearance.glassMode,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                )
                 SliderRow(
                     title = "玻璃强度",
                     value = appearance.glassIntensity,
                     valueRange = 0.4f..1.6f,
                     format = { "%.2f×".format(it) },
-                    onCommit = { scope.launch { store.setGlassIntensity(it) } },
+                    onPreview = { previewIntensity = it },
+                    onCommit = {
+                        previewIntensity = it
+                        scope.launch { store.setGlassIntensity(it) }
+                    },
                 )
             }
         }
@@ -257,6 +273,7 @@ private fun SliderRow(
     valueRange: ClosedFloatingPointRange<Float>,
     format: (Float) -> String,
     onCommit: (Float) -> Unit,
+    onPreview: ((Float) -> Unit)? = null,
 ) {
     var local by remember(value) { mutableFloatStateOf(value) }
     Column(
@@ -277,9 +294,55 @@ private fun SliderRow(
         }
         EchoSlider(
             value = local,
-            onValueChange = { local = it },
+            onValueChange = {
+                local = it
+                onPreview?.invoke(it)
+            },
             onValueChangeFinished = { onCommit(local) },
             valueRange = valueRange,
+        )
+    }
+}
+
+/** 外观页专用预览：彩色渐变打底，叠玻璃层，拖动时实时反映强度。 */
+@Composable
+private fun GlassPreview(intensity: Float, mode: GlassMode, modifier: Modifier = Modifier) {
+    val k = intensity.coerceIn(0.4f, 1.6f)
+    val blurDp = EchoGlass.blurRadiusFor(k) * if (mode == GlassMode.FROSTED) 1.6f else 1f
+    val tint = if (mode == GlassMode.FROSTED) {
+        (0.28f + 0.36f * k).coerceIn(0.26f, 0.86f)
+    } else {
+        (0.06f + 0.10f * k).coerceIn(0.05f, 0.22f)
+    }
+    val edge = (0.12f + 0.35f * k).coerceIn(0.1f, 0.7f)
+    val shape = RoundedCornerShape(18.dp)
+
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(76.dp)
+            .clip(shape),
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(76.dp)
+                .blur(blurDp, BlurredEdgeTreatment.Unbounded)
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color(0xFFFF8A3D), Color(0xFF7B61FF), Color(0xFF2ED0C5)),
+                    ),
+                ),
+        )
+        Box(
+            Modifier
+                .matchParentSize()
+                .background(Color.White.copy(alpha = tint)),
+        )
+        Box(
+            Modifier
+                .matchParentSize()
+                .border(1.dp, Color.White.copy(alpha = edge), shape),
         )
     }
 }

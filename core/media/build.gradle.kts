@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -29,4 +30,5 @@ dependencies {
     api(libs.media3.session)
     implementation(libs.media3.datasource)
     implementation(libs.media3.database)
+    api(libs.kotlinx.serialization.json)
 }
